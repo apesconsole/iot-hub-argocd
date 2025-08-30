@@ -1,21 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: iot-hub
-  namespace: ape
-  labels:
-    app.kubernetes.io/name: iot-hub
-    app.kubernetes.io/part-of: apesconsole-iot-hub
-    app.kubernetes.io/managed-by: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
-    argocd.argoproj.io/compare-options: IgnoreExtraneous
+  name: apesconsole-iot-hub
+  namespace: argocd
 spec:
-  project: apesconsole-iot-hub
+  project: iot-hub-project
   source:
     repoURL: https://github.com/apesconsole/apesconsole-iot-hub.git
-    targetRevision: HEAD
-    path: kubernetes/iot-hub-deployment.yaml
+    targetRevision: master
+    path: kubernetes
   destination:
     server: https://kubernetes.default.svc
     namespace: ape
@@ -23,12 +16,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-    retry:
-      limit: 2
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m0s
-  revisionHistoryLimit: 1

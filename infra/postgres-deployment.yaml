@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/data/pg-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: ape
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: ape
+data:
+  postgresql.conf: |
+    listen_addresses = '*'
+    timezone = 'Asia/Kolkata'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: ape
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: TZ
+              value: "Asia/Kolkata"
+            - name: PGTZ
+              value: "Asia/Kolkata"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: apedb
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=en_US.UTF-8 --encoding=UTF8 --timezone=Asia/Kolkata"
+          args:
+            - "-c"
+            - "timezone=Asia/Kolkata"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+            - name: postgres-config-volume
+              mountPath: /etc/postgresql/postgresql.conf
+              subPath: postgresql.conf
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: postgres-config-volume
+          configMap:
+            name: postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: ape
+spec:
+  selector:
+    app: postgres
+  type: NodePort
+  ports:
+    - port: 5432
+      targetPort: 5432
+      nodePort: 30032
