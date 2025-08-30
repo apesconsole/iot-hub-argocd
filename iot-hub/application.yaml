@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/apesconsole/apesconsole-iot-hub.git
     targetRevision: master
-    path: kubernetes
+    path: kubernetes/deployment
   destination:
     server: https://kubernetes.default.svc
     namespace: ape
